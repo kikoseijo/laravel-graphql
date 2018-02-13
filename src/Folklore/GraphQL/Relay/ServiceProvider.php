@@ -38,7 +38,8 @@ class ServiceProvider extends BaseServiceProvider
             if (!in_array($name, $schemas)) {
                 continue;
             }
-            $schema['query'] = array_merge($schema['query'], $query);
+            $baseQueries = array_get($schema, 'query', null);
+            $schema['query'] = $baseQueries ? array_merge($baseQueries, $query) : $query;
             $this->app['graphql']->addSchema($name, $schema);
         }
     }

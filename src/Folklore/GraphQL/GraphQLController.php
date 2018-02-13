@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
+use Illuminate\Support\Facades\Log;
+
 class GraphQLController extends Controller
 {
     public function __construct(Request $request)
@@ -68,9 +70,18 @@ class GraphQLController extends Controller
         $headers = config('graphql.headers', []);
         $options = config('graphql.json_encoding_options', 0);
 
+
         $errors = !$isBatch ? array_get($data, 'errors', []) : [];
+
+
+        if (config('graphql.debug_queries_to_logs', false)) {
+            $this->logi($request);
+            $this->logi($data);
+            $this->logi($errors);
+        }
+
         $authorized = array_reduce($errors, function ($authorized, $error) {
-            return !$authorized || strpos(array_get($error, 'message'), 'nauthorized') !== false ? false : true;
+            return !$authorized || array_get($error, 'message') === 'Unauthorized' ? false : true;
         }, true);
         if (!$authorized) {
             return response()->json($data, 403, $headers, $options);
@@ -110,6 +121,22 @@ class GraphQLController extends Controller
             return app('auth')->user();
         } catch (\Exception $e) {
             return null;
+        }
+    }
+
+
+    protected function logi($data){
+        if (app()->environment() != 'production') {
+            Log::info($this->transform_log($data));
+        }
+    }
+
+    protected function transform_log($data)
+    {
+        if (is_array($data)){
+            return json_encode($data);
+        } else {
+            return $data;
         }
     }
 }
